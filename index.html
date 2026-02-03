@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>School Platform</title>
+<style>
+:root {
+  --bg: #f5f7fb;
+  --panel: #ffffff;
+  --accent: #2563eb;
+  --text: #1f2937;
+  --soft: #e5e7eb;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  background: var(--panel);
+  padding: 15px 30px;
+  border-bottom: 1px solid var(--soft);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: #e5e7eb;
+  color: #111;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+main {
+  display: flex;
+  height: calc(100vh - 70px);
+}
+
+aside {
+  width: 280px;
+  background: var(--panel);
+  padding: 20px;
+  border-right: 1px solid var(--soft);
+}
+
+section {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+.card {
+  background: var(--panel);
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--soft);
+  cursor: pointer;
+}
+
+.card:hover {
+  border-color: var(--accent);
+}
+
+input, textarea {
+  width: 100%;
+  padding: 8px;
+  margin: 6px 0;
+  border-radius: 8px;
+  border: 1px solid var(--soft);
+}
+
+.hidden {
+  display: none;
+}
+
+.answer {
+  background: #f1f5f9;
+  padding: 10px;
+  border-radius: 8px;
+  margin-top: 6px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <strong>📘 School Platform</strong>
+  <div id="roleSelect">
+    <button onclick="setRole('teacher')">Teacher</button>
+    <button class="secondary" onclick="setRole('student')">Student</button>
+  </div>
+</header>
+
+<main>
+  <aside id="teacherPanel" class="hidden">
+    <h3>Teacher Panel</h3>
+    <input id="title" placeholder="Assignment title">
+    <textarea id="desc" placeholder="Assignment description"></textarea>
+    <button onclick="addTask()">Add Assignment</button>
+  </aside>
+
+  <section>
+    <h2>Assignments</h2>
+    <div id="list"></div>
+
+    <div id="taskView" class="hidden">
+      <h3 id="taskTitle"></h3>
+      <p id="taskDesc"></p>
+
+      <div id="studentAnswer" class="hidden">
+        <textarea id="answerText" placeholder="Write your answer here..."></textarea>
+        <button onclick="sendAnswer()">Send Answer</button>
+      </div>
+
+      <div id="teacherAnswers" class="hidden">
+        <h4>Student Answers</h4>
+        <div id="answersList"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+let role = null;
+let currentTask = null;
+
+let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
+function save() {
+  localStorage.setItem("tasks", JSON.stringify(tasks));
+}
+
+function setRole(r) {
+  role = r;
+  teacherPanel.classList.toggle("hidden", r !== "teacher");
+  render();
+}
+
+function render() {
+  list.innerHTML = "";
+  taskView.classList.add("hidden");
+
+  tasks.forEach((t, i) => {
+    let div = document.createElement("div");
+    div.className = "card";
+    div.innerText = t.title;
+    div.onclick = () => openTask(i);
+    list.appendChild(div);
+  });
+}
+
+function addTask() {
+  if (!title.value || !desc.value) return;
+  tasks.push({ title: title.value, desc: desc.value, answers: [] });
+  save();
+  title.value = "";
+  desc.value = "";
+  render();
+}
+
+function openTask(i) {
+  currentTask = i;
+  let t = tasks[i];
+
+  taskView.classList.remove("hidden");
+  taskTitle.innerText = t.title;
+  taskDesc.innerText = t.desc;
+
+  studentAnswer.classList.toggle("hidden", role !== "student");
+  teacherAnswers.classList.toggle("hidden", role !== "teacher");
+
+  if (role === "teacher") {
+    answersList.innerHTML = "";
+    t.answers.forEach(a => {
+      let d = document.createElement("div");
+      d.className = "answer";
+      d.innerText = a;
+      answersList.appendChild(d);
+    });
+  }
+}
+
+function sendAnswer() {
+  let text = answerText.value.trim();
+  if (!text) return;
+  tasks[currentTask].answers.push(text);
+  save();
+  answerText.value = "";
+  alert("Answer sent!");
+}
+
+render();
+</script>
+
+</body>
+</html>
