@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Панель учителя</title>
+<style>body{font-family:Arial,max-width:900px;margin:20px auto;padding:0 10px}label{display:block;margin:8px 0}</style>
+</head>
+<body>
+  <h1>Панель учителя — публикация задания</h1>
+  <div>
+    <div id="userEmail"></div>
+    <button id="login">Войти</button>
+    <button id="logout" style="display:none">Выйти</button>
+  </div>
+
+  <form id="form" style="margin-top:12px;max-width:600px">
+    <label>Заголовок: <input id="title" required></label>
+    <label>Описание:<br><textarea id="description" rows="6" style="width:100%"></textarea></label>
+    <label>Срок (YYYY-MM-DD): <input id="due" type="date"></label>
+    <label>Файл задания: <input type="file" id="file"></label>
+    <button type="submit">Опубликовать</button>
+    <div id="status" style="margin-top:8px;color:green"></div>
+  </form>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+  <script>
+    // TODO: ваш конфиг
+    const firebaseConfig = {
+      apiKey: "API_KEY",
+      authDomain: "PROJECT_ID.firebaseapp.com",
+      projectId: "PROJECT_ID",
+      storageBucket: "PROJECT_ID.appspot.com",
+      messagingSenderId: "SENDER_ID",
+      appId: "APP_ID"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    // Укажите email учителя
+    const steamdeck521@gmail.com ="teacher@example.com";
+
+    const loginBtn = document.getElementById('login');
+    const logoutBtn = document.getElementById('logout');
+    const userEmail = document.getElementById('userEmail');
+    const form = document.getElementById('form');
+    const status = document.getElementById('status');
+
+    loginBtn.onclick = async () => {
+      const email = prompt("Email:");
+      if (!email) return;
+      const password = prompt("admin54321:");
+      try { await auth.signInWithEmailAndPassword(email, password); }
+      catch (e) { alert(e.message); }
+    };
+    logoutBtn.onclick = () => auth.signOut();
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        userEmail.textContent = user.email;
+        loginBtn.style.display = 'none';
+        logoutBtn.style.display = '';
+        if (user.email !== TEACHER_EMAIL) {
+          alert('Доступ запрещен: вы не учитель.');
+        }
+      } else {
+        userEmail.textContent = '';
+        loginBtn.style.display = '';
+        logoutBtn.style.display = 'none';
+      }
+    });
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const user = auth.currentUser;
+      if (!user || user.email !== TEACHER_EMAIL) { alert('Только учитель может публиковать.'); return; }
+      const title = document.getElementById('title').value.trim();
+      const description = document.getElementById('description').value.trim();
+      const dueInput = document.getElementById('due').value;
+      const fileInput = document.getElementById('file');
+      status.style.color = 'green';
+      status.textContent = 'Публикация...';
+      try {
+        let fileUrl = '';
+        if (fileInput.files.length) {
+          const f = fileInput.files[0];
+          const ref = storage.ref().child(`assignments_files/${Date.now()}_${f.name}`);
+          await ref.put(f);
+          fileUrl = await ref.getDownloadURL();
+        }
+        const docRef = await db.collection('assignments').add({
+          title,
+          description,
+          fileUrl,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          due: dueInput ? firebase.firestore.Timestamp.fromDate(new Date(dueInput)) : null
+        });
+        status.textContent = 'Опубликовано (id: ' + docRef.id + ')';
+        form.reset();
+      } catch (e) {
+        status.style.color = 'red';
+        status.textContent = 'Ошибка: ' + e.message;
+      }
+    };
+  </script>
+</body>
+</html>
